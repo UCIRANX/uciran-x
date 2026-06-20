@@ -9,9 +9,8 @@ export default {
       const accessToken = crypto.randomUUID();
       const refreshToken = crypto.randomUUID();
 
-      // ذخیره refresh token
       await env.DB.put(refreshToken, userId, {
-        expirationTtl: 60 * 60 * 24 * 30, // 30 روز
+        expirationTtl: 60 * 60 * 24 * 30,
       });
 
       return Response.json({
@@ -20,7 +19,7 @@ export default {
       });
     }
 
-    // REFRESH
+    // REFRESH (ROTATION)
     if (url.pathname === "/refresh") {
       const body = await request.json().catch(() => ({}));
 
@@ -28,13 +27,40 @@ export default {
 
       if (!userId) {
         return Response.json(
-          { error: "invalid refresh token" },
+          { error: "invalid or used refresh token" },
           { status: 401 }
         );
       }
 
+      // 🔴 مهم: توکن قبلی حذف میشه (one-time use)
+      await env.DB.delete(body.refreshToken);
+
+      const newAccessToken = crypto.randomUUID();
+      const newRefreshToken = crypto.randomUUID();
+
+      // ذخیره refresh جدید
+      await env.DB.put(newRefreshToken, userId, {
+        expirationTtl: 60 * 60 * 24 * 30,
+      });
+
       return Response.json({
-        accessToken: crypto.randomUUID(),
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      });
+    }
+
+    // LOGOUT
+    if (url.pathname === "/logout") {
+      const body = await request.json().catch(() => ({}));
+
+      if (!body.refreshToken) {
+        return Response.json({ error: "missing refresh token" }, { status: 400 });
+      }
+
+      await env.DB.delete(body.refreshToken);
+
+      return Response.json({
+        status: "logged out",
       });
     }
 

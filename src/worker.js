@@ -3,7 +3,7 @@ export default {
     const url = new URL(request.url);
 
     // =========================
-    // PANEL
+    // PANEL UI
     // =========================
     if (url.pathname === "/") {
       return new Response(html(), {
@@ -12,7 +12,7 @@ export default {
     }
 
     // =========================
-    // LOGIN (create user + key)
+    // LOGIN (create user + api key)
     // =========================
     if (url.pathname === "/login") {
       const userId = crypto.randomUUID();
@@ -20,7 +20,10 @@ export default {
 
       await saveKey(env, userId, apiKey);
 
-      return Response.json({ userId, apiKey });
+      return Response.json({
+        userId,
+        apiKey,
+      });
     }
 
     // =========================
@@ -46,7 +49,7 @@ export default {
     }
 
     // =========================
-    // SUBSCRIPTION OUTPUT
+    // SUBSCRIPTION ENDPOINT
     // =========================
     if (url.pathname.startsWith("/sub/")) {
       const subId = url.pathname.split("/")[2];
@@ -54,20 +57,22 @@ export default {
       const userId = await env.DB.get("sub:" + subId);
 
       if (!userId) {
-        return Response.json({ error: "invalid sub" }, { status: 404 });
+        return Response.json({ error: "invalid subscription" }, { status: 404 });
       }
 
-      // گرفتن همه key های user
       const keys = JSON.parse(await env.DB.get(userId + ":keys") || "[]");
 
       return Response.json({
+        name: "UCIRAN X",
+        type: "subscription",
+        baseUrl: url.origin,
         userId,
         apiKeys: keys,
         endpoints: {
           verify: "/verify",
           keys: "/keys",
-          delete: "/delete-key",
-        },
+          delete: "/delete-key"
+        }
       });
     }
 
@@ -82,7 +87,10 @@ export default {
         return Response.json({ error: "invalid key" }, { status: 401 });
       }
 
-      return Response.json({ ok: true, userId });
+      return Response.json({
+        ok: true,
+        userId
+      });
     }
 
     // =========================
@@ -98,7 +106,10 @@ export default {
 
       const keys = JSON.parse(await env.DB.get(userId + ":keys") || "[]");
 
-      return Response.json({ userId, keys });
+      return Response.json({
+        userId,
+        keys
+      });
     }
 
     // =========================
@@ -107,17 +118,17 @@ export default {
     if (url.pathname === "/delete-key") {
       const body = await request.json().catch(() => ({}));
 
-      const key = body.apiKey;
-      const userId = await env.DB.get(key);
+      const apiKey = body.apiKey;
+      const userId = await env.DB.get(apiKey);
 
       if (!userId) {
         return Response.json({ error: "invalid key" }, { status: 401 });
       }
 
-      await env.DB.delete(key);
+      await env.DB.delete(apiKey);
 
       let keys = JSON.parse(await env.DB.get(userId + ":keys") || "[]");
-      keys = keys.filter(k => k !== key);
+      keys = keys.filter(k => k !== apiKey);
 
       await env.DB.put(userId + ":keys", JSON.stringify(keys));
 
@@ -145,7 +156,7 @@ async function saveKey(env, userId, apiKey) {
 }
 
 // =========================
-// PANEL UI
+// SIMPLE PANEL UI
 // =========================
 function html() {
   return `
@@ -164,7 +175,7 @@ function html() {
 <hr>
 
 <input id="key" placeholder="API Key" />
-<button onclick="createSub()">Create Subscription Link</button>
+<button onclick="createSub()">Create Subscription</button>
 
 <p id="sub"></p>
 

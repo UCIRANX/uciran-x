@@ -2,30 +2,14 @@
 
 Cloudflare-Native platform for user management, smart routing, worker clustering and subscription delivery.
 
-## Features
 
-- Multi Worker Cluster
-- Adaptive Routing
-- Smart Proxy Pool
-- Geo Routing
-- User Management
-- Analytics
-- Health Monitoring
-- Cloudflare D1
-- Cloudflare KV
-- Cloudflare R2
+## Deploy
 
-## Stack
+1. Install Wrangler
+2. Run:
+   wrangler deploy
 
-- Cloudflare Workers
-- Hono
-- D1
-- KV
-- R2
-- React
-- TypeScript
-- TailwindCSS
+## Endpoints
 
-## Status
-
-Under active development.
+- /login → get tokens
+- /refresh → get new access token

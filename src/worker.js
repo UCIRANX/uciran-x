@@ -2,7 +2,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // LOGIN
+    // LOGIN → ساخت user + token
     if (url.pathname === "/login") {
       const userId = crypto.randomUUID();
 
@@ -14,12 +14,13 @@ export default {
       });
 
       return Response.json({
+        userId,
         accessToken,
         refreshToken,
       });
     }
 
-    // REFRESH (ROTATION)
+    // REFRESH → گرفتن user از روی refreshToken
     if (url.pathname === "/refresh") {
       const body = await request.json().catch(() => ({}));
 
@@ -27,43 +28,45 @@ export default {
 
       if (!userId) {
         return Response.json(
-          { error: "invalid or used refresh token" },
+          { error: "invalid refresh token" },
           { status: 401 }
         );
       }
 
-      // 🔴 مهم: توکن قبلی حذف میشه (one-time use)
+      // rotate token
       await env.DB.delete(body.refreshToken);
 
       const newAccessToken = crypto.randomUUID();
       const newRefreshToken = crypto.randomUUID();
 
-      // ذخیره refresh جدید
       await env.DB.put(newRefreshToken, userId, {
         expirationTtl: 60 * 60 * 24 * 30,
       });
 
       return Response.json({
+        userId,
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       });
     }
 
-    // LOGOUT
-    if (url.pathname === "/logout") {
-      const body = await request.json().catch(() => ({}));
+    // AUTH TEST (برای تست کاربر)
+    if (url.pathname === "/me") {
+      const token = request.headers.get("Authorization");
 
-      if (!body.refreshToken) {
-        return Response.json({ error: "missing refresh token" }, { status: 400 });
+      if (!token) {
+        return Response.json({ error: "no token" }, { status: 401 });
       }
 
-      await env.DB.delete(body.refreshToken);
-
+      // ساده: توکن رو مستقیم userId فرض نمی‌کنیم
+      // (فعلاً فقط تستی)
       return Response.json({
-        status: "logged out",
+        message: "auth endpoint working",
       });
     }
 
-    return Response.json({ status: "ok" });
+    return Response.json({
+      status: "UCIRAN X API running",
+    });
   },
 };

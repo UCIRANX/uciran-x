@@ -2,7 +2,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // LOGIN → ساخت user + token
+    // LOGIN (همون قبلی)
     if (url.pathname === "/login") {
       const userId = crypto.randomUUID();
 
@@ -20,20 +20,53 @@ export default {
       });
     }
 
-    // REFRESH → گرفتن user از روی refreshToken
+    // CREATE API KEY
+    if (url.pathname === "/create-key") {
+      const body = await request.json().catch(() => ({}));
+
+      if (!body.userId) {
+        return Response.json({ error: "userId required" }, { status: 400 });
+      }
+
+      const apiKey = "ucx_" + crypto.randomUUID().replaceAll("-", "");
+
+      await env.DB.put(apiKey, body.userId);
+
+      return Response.json({
+        apiKey,
+      });
+    }
+
+    // VERIFY API KEY (middleware test)
+    if (url.pathname === "/verify") {
+      const apiKey = request.headers.get("x-api-key");
+
+      if (!apiKey) {
+        return Response.json({ error: "missing api key" }, { status: 401 });
+      }
+
+      const userId = await env.DB.get(apiKey);
+
+      if (!userId) {
+        return Response.json({ error: "invalid api key" }, { status: 401 });
+      }
+
+      return Response.json({
+        ok: true,
+        userId,
+      });
+    }
+
+    // REFRESH TOKEN
     if (url.pathname === "/refresh") {
       const body = await request.json().catch(() => ({}));
 
       const userId = await env.DB.get(body.refreshToken);
 
       if (!userId) {
-        return Response.json(
-          { error: "invalid refresh token" },
-          { status: 401 }
-        );
+        return Response.json({ error: "invalid refresh token" }, { status: 401 });
       }
 
-      // rotate token
       await env.DB.delete(body.refreshToken);
 
       const newAccessToken = crypto.randomUUID();
@@ -47,21 +80,6 @@ export default {
         userId,
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
-      });
-    }
-
-    // AUTH TEST (برای تست کاربر)
-    if (url.pathname === "/me") {
-      const token = request.headers.get("Authorization");
-
-      if (!token) {
-        return Response.json({ error: "no token" }, { status: 401 });
-      }
-
-      // ساده: توکن رو مستقیم userId فرض نمی‌کنیم
-      // (فعلاً فقط تستی)
-      return Response.json({
-        message: "auth endpoint working",
       });
     }
 

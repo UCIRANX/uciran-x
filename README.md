@@ -71,7 +71,7 @@
 | متغیر | اجباری | توضیح |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | ✅ | توکن ربات از BotFather |
-| `WORKER_DOMAIN` | ✅ | آدرس Worker، مثلاً `my-bot.username.workers.dev` |
+| `WORKER_DOMAIN` | ✅ | آدرس Worker، مثلاً `my-bot.username.workers.dev` حتما بدون https:// باشه|
 | `GEMINI_API_KEYS` | ❌ | یک یا چند کلید Gemini با کاما جدا شده (برای جستجوی آنلاین) |
 | `OPENMODEL_API_KEY` | ❌ | کلید OpenModel برای مدل DeepSeek V4 Flash |
 

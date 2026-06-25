@@ -1,7 +1,0 @@
-name = "uciran-x"
-main = "src/worker.js"
-compatibility_date = "2026-01-01"
-
-kv_namespaces = [
-  { binding = "DB", id = "969da57557c94443b038f9dd177fe485" }
-]

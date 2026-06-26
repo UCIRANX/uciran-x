@@ -54,7 +54,7 @@ The first model that responds successfully sends the final reply to the user; th
 
 ### 👇 Video Setup Tutorial for the Telegram AI Bot 👇
 
-(https://t.me/UCIRANIR/33001)
+(https://t.me/kinguciran/2975066)
 
 ### Prerequisites
 

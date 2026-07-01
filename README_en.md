@@ -17,22 +17,6 @@ An all-in-one AI bot for Telegram that runs **serverless** on Cloudflare Workers
 
 ---
 
-## 🆕 What's New (worker-1.js)
-
-`worker-1.js` introduces two main changes compared to `worker.js`:
-
-1. **Removed the DeepSeek V4 Flash (OpenModel) integration** — the model itself and all related code (the `OPENMODEL_API_KEY` variable, the `callOpenModel` function, and its step in `FALLBACK_ORDER`) have been fully removed. The fallback chain now has 6 steps instead of 7, and `OPENMODEL_API_KEY` no longer needs to be configured.
-
-2. **Automatic image-size detection + smart downscaling to save Neuron usage** — a new capability added to the `/draw` and `/edit` commands:
-   - If the user includes a size pattern like `1024x720` or `1024*720` in the prompt text, the new `extractSizeFromPrompt()` function detects and strips it out (so it doesn't get sent to the image model as part of the prompt).
-   - The new `scaleDimensions()` function then preserves that same aspect ratio, but always caps the longest side at 504px (a multiple of 8) — keeping FLUX model Neuron usage low on Cloudflare Workers AI's free plan.
-   - For `/edit`, the aspect ratio is automatically read from the actual dimensions Telegram reports for the source photo — no need for the user to specify a size.
-   - If no size is given, the default is now 504×504 (instead of 1024×1024 in the previous `worker.js`).
-
-> 💡 The goal is to reduce FLUX Neuron quota usage on Cloudflare's free plan so the daily limit is reached later, while still generating images that respect the user's requested aspect ratio.
-
----
-
 ## ✨ Features
 
 | Feature | Description |
@@ -61,8 +45,6 @@ Automatic fallback order:
 6. Llama 4 Scout       (Cloudflare Workers AI — Vision)
 7. DeepSeek R1 32B     (Cloudflare Workers AI)
 ```
-
-> ℹ️ The DeepSeek V4 Flash (OpenModel) model, present in earlier versions, has been removed in `worker-1.js`.
 
 The first model that responds successfully sends the final reply to the user; the rest only activate if the previous model fails.
 
@@ -131,7 +113,7 @@ In addition, directly sending an image, video (up to the configured size limit),
 ```
 /draw a mountain landscape 1024x720
 ```
-The bot preserves that aspect ratio (1024:720) but caps the longest side at 504px to save Neuron usage on the free plan. In `/edit`, the aspect ratio is taken automatically from the source photo, so no size needs to be entered.
+The bot preserves that aspect ratio (1024:720) but caps the longest side at 800px to save Neuron usage on the free plan. In `/edit`, the aspect ratio is taken automatically from the source photo, so no size needs to be entered.
 
 ---
 

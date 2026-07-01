@@ -1,0 +1,175 @@
+# 🤖 Telegram AI Bot — Cloudflare Workers
+
+<p align="center">
+  <a href="README.md">زبان فارسی</a> | <a href="README.en.md">English</a>
+</p>
+
+> A fast, free, serverless Telegram AI bot — runs on Cloudflare Workers with 7 AI models and automatic fallback.
+
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
+[![Telegram Bot](https://img.shields.io/badge/Telegram-Bot%20API-26A5E4?style=flat&logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](#-license)
+[![Telegram Channel](https://img.shields.io/badge/Telegram-@Uciranir-26A5E4?style=flat&logo=telegram&logoColor=white)](https://t.me/Uciranir)
+
+An all-in-one AI bot for Telegram that runs **serverless** on Cloudflare Workers — no VPS, no hosting costs, and near-zero cold start. The project automatically switches between 7 different AI models so it always responds, even if one model or service goes down.
+
+📢 For updates and similar projects, join the channel: **[@Uciranir](https://t.me/Uciranir)**
+
+---
+
+## 🆕 What's New (worker-1.js)
+
+`worker-1.js` introduces two main changes compared to `worker.js`:
+
+1. **Removed the DeepSeek V4 Flash (OpenModel) integration** — the model itself and all related code (the `OPENMODEL_API_KEY` variable, the `callOpenModel` function, and its step in `FALLBACK_ORDER`) have been fully removed. The fallback chain now has 6 steps instead of 7, and `OPENMODEL_API_KEY` no longer needs to be configured.
+
+2. **Automatic image-size detection + smart downscaling to save Neuron usage** — a new capability added to the `/draw` and `/edit` commands:
+   - If the user includes a size pattern like `1024x720` or `1024*720` in the prompt text, the new `extractSizeFromPrompt()` function detects and strips it out (so it doesn't get sent to the image model as part of the prompt).
+   - The new `scaleDimensions()` function then preserves that same aspect ratio, but always caps the longest side at 504px (a multiple of 8) — keeping FLUX model Neuron usage low on Cloudflare Workers AI's free plan.
+   - For `/edit`, the aspect ratio is automatically read from the actual dimensions Telegram reports for the source photo — no need for the user to specify a size.
+   - If no size is given, the default is now 504×504 (instead of 1024×1024 in the previous `worker.js`).
+
+> 💡 The goal is to reduce FLUX Neuron quota usage on Cloudflare's free plan so the daily limit is reached later, while still generating images that respect the user's requested aspect ratio.
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---|---|
+| 🧠 **6 AI Models** | GPT-OSS 120B, Gemma, Qwen3 30B, Llama 4 Scout, and DeepSeek R1 |
+| 🔁 **Automatic Fallback** | If a model fails to respond or errors out, the next model is tried automatically |
+| 🎛 **Manual Model Selection** | Users can pick their preferred model from an inline menu |
+| 🖼 **Image & Video Analysis** | Vision-capable models for describing images and short videos |
+| 📄 **File & Code Analysis** | Reads and analyzes text/code files (`.py` `.js` `.json`, etc.) |
+| 🌐 **Online Search** | `/online` command for web-search-grounded answers via Gemini |
+| 💾 **Conversation Memory** | Stores each user's chat history in Cloudflare KV |
+| 📢 **Automatic Channel Promo** | Periodically shows a channel promo message every N messages (configurable) |
+| ⚡️ **Serverless** | Runs entirely on Cloudflare's Edge Network — no host or VPS needed |
+
+---
+
+## 🧩 Model Structure
+
+```
+Automatic fallback order:
+1. GPT-OSS 120B        (Cloudflare Workers AI)
+2. Gemma 4 27B         (Cloudflare Workers AI — Vision)
+3. Gemini 2.5 Flash    (Google AI API)
+4. Groq Llama 4 Scout  (Groq — fast, free)
+5. Qwen3 30B           (Cloudflare Workers AI)
+6. Llama 4 Scout       (Cloudflare Workers AI — Vision)
+7. DeepSeek R1 32B     (Cloudflare Workers AI)
+```
+
+> ℹ️ The DeepSeek V4 Flash (OpenModel) model, present in earlier versions, has been removed in `worker-1.js`.
+
+The first model that responds successfully sends the final reply to the user; the rest only activate if the previous model fails.
+
+---
+
+## 🚀 Setup
+
+### 👇 Video Setup Tutorial for the Telegram AI Bot 👇
+
+(https://t.me/kinguciran/2975066)
+
+### Prerequisites
+
+- A [Cloudflare](https://dash.cloudflare.com/) account (free plan is enough)
+- A Telegram bot created via [@BotFather](https://t.me/BotFather), and its token
+- (Optional) An API key from [Google AI Studio](https://aistudio.google.com/) for Gemini
+- (Optional) A [Groq Console](https://console.groq.com/) API key for Groq Llama 4 Scout
+
+### Installation Steps
+
+**1. Create the Worker**
+Paste the `worker-1.js` code (latest version) into a new Worker in the Cloudflare dashboard, or deploy it with Wrangler.
+
+**2. Bind a KV Namespace**
+Create a KV Namespace and bind it to the Worker as `KV`. This is used to store conversation memory, the user's selected model, and message counters.
+
+**3. Enable Workers AI**
+Add the Workers AI binding named `AI` to the Worker (under Settings → Bindings).
+
+**4. Set Environment Variables**
+
+| Variable | Required | Description |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | ✅ | The bot token from BotFather |
+| `WORKER_DOMAIN` | ✅ | Worker address, e.g. `my-bot.username.workers.dev` — must be without `https://` |
+| `GEMINI_API_KEYS` | ❌ | One or more Gemini keys, comma-separated (for online search) |
+| `GROQ_API_KEYS` | ❌ | One or more Groq keys, comma-separated (from [console.groq.com](https://console.groq.com/) — free) |
+
+**5. Set the Webhook**
+After deploying, open the following URL once in your browser:
+
+```
+https://<WORKER_DOMAIN>/setWebhook
+```
+
+If you get `"ok": true` in the response, the bot is ready to use. 🎉
+
+---
+
+## 💬 Bot Commands
+
+| Command | Function |
+|---|---|
+| `/start` | Start and show a general guide |
+| `/help` | Full command reference |
+| `/clear` | Clear conversation memory |
+| `/models` | List active models |
+| `/engine` | Select an AI model from a menu |
+| `/online [question]` | Get an answer with online search (Gemini) |
+| `/draw [description]` | Generate an image from text (FLUX.2 Klein model) |
+| `/edit [description]` | Edit an image — reply to a photo with this command |
+
+In addition, directly sending an image, video (up to the configured size limit), or text/code file is processed automatically.
+
+**🆕 Specifying image size in `/draw`:** you can include a size in your description, e.g.:
+```
+/draw a mountain landscape 1024x720
+```
+The bot preserves that aspect ratio (1024:720) but caps the longest side at 504px to save Neuron usage on the free plan. In `/edit`, the aspect ratio is taken automatically from the source photo, so no size needs to be entered.
+
+---
+
+## ⚙️ Customizable Settings
+
+At the top of `worker.js`:
+
+```js
+const CHANNEL      = '@uciranir';      // Channel username
+const CHANNEL_LINK = 'https://t.me/uciranir';
+const SHOW_CH_EVERY = 15;              // Show channel promo every N messages
+const MAX_HISTORY   = 6;               // Number of exchanges kept in memory
+const MSG_LIMIT     = 4000;            // Max length of outgoing messages
+const MAX_VIDEO_MB  = 19;              // Max video size that can be processed
+```
+
+> ⚠️ **Important note about Gemini:** keys belonging to the same Google account/project share a quota. To actually increase your quota, each key needs to come from a separate Google account.
+
+---
+
+## 🛡 Limitations
+
+- Voice/audio processing (`voice` / `audio`) is not currently supported
+- Max processable text file size: 500 KB
+- A local rate limit is applied for Gemini to avoid quickly hitting Google's free-tier cap
+
+---
+
+## 📢 Support & Updates
+
+Have a question, found a bug, or have a suggestion? Open an Issue. For new updates, similar projects, and more tutorials, follow the Telegram channel:
+
+### 👉 [@Uciranir](https://t.me/Uciranir)
+
+---
+
+## 📄 License
+
+This project is released under the MIT License. Use, modify, and distribute it freely.
+
+⭐️ If you found this project useful, please give the repository a star!
